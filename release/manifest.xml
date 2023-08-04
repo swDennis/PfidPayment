@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/shopware/platform/trunk/src/Core/Framework/App/Manifest/Schema/manifest-2.0.xsd">
+    <meta>
+        <name>PfidPayment</name>
+        <label>Super Pfid Payment App</label>
+        <label lang="de-DE">Super Pfid Payment App</label>
+        <description>This is a test application for payment transactions</description>
+        <description lang="de-DE">Dies ist eine Testanwendung für den Zahlungsverkehr</description>
+        <author>shopware AG</author>
+        <copyright>(c) by shopware AG.</copyright>
+        <icon>Resources/config/plugin.png</icon>
+        <license>MIT</license>
+        <version>0.0.12</version>
+    </meta>
+
+    <setup>
+        <registrationUrl>http://pfidPayment.localhost/public/lifecycle/register</registrationUrl>
+        <secret>TestSecret</secret>
+    </setup>
+
+    <webhooks>
+        <webhook name="appActivated" event="app.activated" url="http://pfidapp.localhost/public/app/lifecycle/activate"></webhook>
+
+        <webhook name="appDeactivated" event="app.deactivated" url="http://pfidapp.localhost/public/app/lifecycle/deactivate"></webhook>
+
+        <webhook name="appDeleted" event="app.deleted" url="http://pfidapp.localhost/public/app/lifecycle/delete"></webhook>
+    </webhooks>
+
+    <payments>
+        <payment-method>
+            <identifier>simplePfidPayment</identifier>
+            <icon>Resources/Resources/pfidPaymentLogo.png</icon>
+            <name>Simple Pfid Payment</name>
+            <name lang="de-DE">Einfache Pfid Zahlung</name>
+            <description>Pay fast and easy with Pfid Payment.</description>
+            <description lang="de-DE">Zahle schnell und einfach mit Pfid Zahlung.</description>
+            <pay-url>http://pfidPayment.localhost/public/payment/pay</pay-url>
+            <finalize-url>http://pfidPayment.localhost/public/payment/finalize</finalize-url>
+        </payment-method>
+    </payments>
+</manifest>
