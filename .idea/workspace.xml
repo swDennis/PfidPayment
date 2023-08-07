@@ -5,18 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7221597b-23fa-45c2-b1b4-a0e1a1c4ea25" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/asd.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/Controller/PayOrNotController.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/pfidpayment.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/pfidpayment.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/php.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/php.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/composer.json" beforeDir="false" afterPath="$PROJECT_DIR$/composer.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/composer.lock" beforeDir="false" afterPath="$PROJECT_DIR$/composer.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/config/bundles.php" beforeDir="false" afterPath="$PROJECT_DIR$/config/bundles.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/release/manifest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/release/manifest.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/Controller/PaymentCaptureController.php" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/Controller/PayOrNotController.php" beforeDir="false" afterPath="$PROJECT_DIR$/src/Controller/PayOrNotController.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/Controller/PaymentPayController.php" beforeDir="false" afterPath="$PROJECT_DIR$/src/Controller/PaymentPayController.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/symfony.lock" beforeDir="false" afterPath="$PROJECT_DIR$/symfony.lock" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -123,6 +114,7 @@
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
     &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
     &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;Symfony2.SettingsForm&quot;,
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
 }</component>
@@ -140,7 +132,9 @@
       <option name="presentableId" value="Default" />
       <updated>1691054095180</updated>
       <workItem from="1691054096193" duration="11463000" />
-      <workItem from="1691127184665" duration="7341000" />
+      <workItem from="1691127184665" duration="17671000" />
+      <workItem from="1691229929625" duration="40000" />
+      <workItem from="1691385363567" duration="4070000" />
     </task>
     <servers />
   </component>

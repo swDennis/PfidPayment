@@ -16,8 +16,15 @@
     <body>
         {% block body %}
             <div>
-                <button type="button">PAY</button>
-                <button type="button">PAY NOT</button>
+                <form action="{{ url('app_payment_accepted') }}">
+                    <input type="hidden" name="opi" value="{{ opi }}">
+                    <input type="submit" value="PAY">
+                </form>
+
+                <form action="{{ url('app_payment_cancel') }}">
+                    <input type="hidden"  name="opi" value="{{ opi }}">
+                    <input type="submit" value="Cancel">
+                </form>
             </div>
         {% endblock %}
     </body>
