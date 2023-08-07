@@ -143,7 +143,7 @@ Check the installation in the shopware admin. The App should be installed and ac
 ---
 
 ## Step 8
-If the installation works, we can a payment method to the `release/manifest.xml`.
+If the installation works, we can add a payment method to the `release/manifest.xml`.
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <manifest xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/shopware/platform/trunk/src/Core/Framework/App/Manifest/Schema/manifest-2.0.xsd">
@@ -156,16 +156,316 @@ If the installation works, we can a payment method to the `release/manifest.xml`
             <name lang="de-DE">Einfache Pfid Zahlung</name>
             <description>Pay fast and easy with Pfid Payment.</description>
             <description lang="de-DE">Zahle schnell und einfach mit Pfid Zahlung.</description>
-            <validate-url>http://pfidPayment.localhost/public/payment/validate</validate-url>
-            <capture-url>http://pfidPayment.localhost/public/capture-payment</capture-url>
+            <pay-url>http://pfidPayment.localhost/public/payment/pay</pay-url>
+            <finalize-url>http://pfidPayment.localhost/public/payment/finalize</finalize-url>
         </payment-method>
     </payments>
     ...
 </manifest>
 
 ```
+After updating the ShopwareApp with the command `./update_app.sh` the new payment-method should be available in Shopware-admin.
 
-Then we can add a new controller for the payment method
+- Check if the payment is active: Settings > Payment methods. 
+- Add the new payment-method inside your sales channel: Payment and shipping > Payment methods
 
-We start with the `src/Controller/PaymentValidateController.php`.
 
+## Step 9
+Create a new PaymentPayController with a route for `/payment/pay`.
+```php
+<?php
+namespace App\Controller;
+
+class PaymentPayController extends AbstractController
+{
+    public function __construct(private readonly ShopRepositoryInterface $shopRepository, private readonly EntityManagerInterface $entityManager)
+    {
+    }
+
+    #[Route('/payment/pay', name: 'app_payment_pay')]
+    public function index(RequestInterface $request): ResponseInterface
+    {
+        
+    }
+}
+```
+This controller shall return a response with a redirect-url:
+```php
+#[Route('/payment/pay', name: 'app_payment_pay')]
+public function index(RequestInterface $request): ResponseInterface
+{
+    $shopResolver = new ShopResolver($this->shopRepository);
+    $signer = new ResponseSigner();
+    $contextResolver = new ContextResolver();
+    $shop = $shopResolver->resolveShop($request);
+    $payment = $contextResolver->assemblePaymentPay($request, $shop);
+
+    $orderPayment = $this->entityManager->getRepository(OrderPayment::class)->saveOrderPayment(
+        $payment->order->getId(),
+        $payment->returnUrl,
+        0
+    );
+
+    $url = 'http://pfidpayment.localhost' .$this->generateUrl('app_payment_accept_or_cancel', ['opi' => $orderPayment->getOrderId()]);
+
+    return $signer->signResponse(PaymentResponse::redirect($url), $shop);
+}
+```
+## Step 10
+Now we need a user interface where the customer can choose to pay or cancel.
+For this create a new Controller which renders a twig-template.
+```php
+<?php
+
+namespace App\Controller;
+
+#[AsController]
+class PayOrNotController extends AbstractController
+{
+    #[Route('/accepted/or/cancel', name: 'app_payment_accept_or_cancel')]
+    public function payOrNot(Request $request): Response
+    {
+        return $this->render('base.html.twig', [
+            'opi' => $request->get('opi')
+        ]);
+    }
+}
+```
+
+```html
+<!DOCTYPE html>
+<html>
+    <head>
+        ...
+    </head>
+    <body>
+        {% block body %}
+            <div>
+                <form action="{{ url('app_payment_accepted') }}">
+                    <input type="hidden" name="opi" value="{{ opi }}">
+                    <input type="submit" value="PAY">
+                </form>
+
+                <form action="{{ url('app_payment_cancel') }}">
+                    <input type="hidden"  name="opi" value="{{ opi }}">
+                    <input type="submit" value="Cancel">
+                </form>
+            </div>
+        {% endblock %}
+    </body>
+</html>
+```
+Now we need 2 routes in the `src/Controller/PayOrNotController.php` which handle the forms:
+```php
+#[Route('/accepted', name: 'app_payment_accepted')]
+public function accepted(Request $request, EntityManagerInterface $entityManager): Response
+{
+    /** @var OrderPayment $orderPayment */
+    $orderPayment = $entityManager->getRepository(OrderPayment::class)->findByOrderId($request->get('opi'));
+
+    if (!$orderPayment instanceof OrderPayment) {
+        throw new Exception('No $orderPayment found');
+    }
+
+    $orderPayment->setAccepted(1);
+
+    $entityManager->persist($orderPayment);
+    $entityManager->flush();
+
+    return $this->redirect($orderPayment->getReturnUrl());
+}
+
+#[Route('/canceled', name: 'app_payment_cancel')]
+public function cancel(Request $request, EntityManagerInterface $entityManager): Response
+{
+    /** @var OrderPayment $orderPayment */
+    $orderPayment = $entityManager->getRepository(OrderPayment::class)->findByOrderId($request->get('opi'));
+
+    if (!$orderPayment instanceof OrderPayment) {
+        throw new Exception('No $orderPayment found');
+    }
+
+    $orderPayment->setAccepted(0);
+
+    $entityManager->persist($orderPayment);
+    $entityManager->flush();
+
+    return $this->redirect($orderPayment->getReturnUrl());
+}
+```
+As you can see we create a new Entity to save the payment state: `src/Entity/OrderPayment.php`:
+```php
+<?php
+
+namespace App\Entity;
+
+...
+use Doctrine\ORM\Mapping as ORM;
+
+#[ORM\Entity(repositoryClass: OrderPaymentRepository::class)]
+class OrderPayment
+{
+    #[ORM\Id]
+    #[ORM\GeneratedValue]
+    #[ORM\Column]
+    private ?int $id = null;
+
+    #[ORM\Column(length: 255)]
+    private ?string $orderId = null;
+
+    #[ORM\Column(type: Types::TEXT)]
+    private $returnUrl = null;
+
+    #[ORM\Column]
+    private ?int $accepted = null;
+
+    public function getId(): ?int
+    {
+        return $this->id;
+    }
+
+    public function getOrderId(): ?string
+    {
+        return $this->orderId;
+    }
+
+    public function setOrderId(string $orderId): static
+    {
+        $this->orderId = $orderId;
+
+        return $this;
+    }
+
+    public function getReturnUrl()
+    {
+        return $this->returnUrl;
+    }
+
+    public function setReturnUrl($returnUrl): static
+    {
+        $this->returnUrl = $returnUrl;
+
+        return $this;
+    }
+
+    public function getAccepted(): ?int
+    {
+        return $this->accepted;
+    }
+
+    public function setAccepted(int $accepted): static
+    {
+        $this->accepted = $accepted;
+
+        return $this;
+    }
+}
+
+```
+For the Entity we create this repository `src/Repository/OrderPaymentRepository.php`:
+```php
+<?php
+
+namespace App\Repository;
+
+/**
+ * @extends ServiceEntityRepository<OrderPayment>
+ *
+ * @method OrderPayment|null find($id, $lockMode = null, $lockVersion = null)
+ * @method OrderPayment|null findOneBy(array $criteria, array $orderBy = null)
+ * @method OrderPayment[]    findAll()
+ * @method OrderPayment[]    findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null)
+ */
+class OrderPaymentRepository extends ServiceEntityRepository
+{
+    public function __construct(ManagerRegistry $registry)
+    {
+        parent::__construct($registry, OrderPayment::class);
+    }
+
+    public function findByOrderId(string $orderId): ?OrderPayment
+    {
+        $orderPayment = $this->createQueryBuilder('op')
+            ->select(['order_payment'])
+            ->from(OrderPayment::class, 'order_payment')
+            ->where('order_payment.orderId = :paymentId')
+            ->setParameter('paymentId', $orderId)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        if (!$orderPayment instanceof OrderPayment) {
+            return null;
+        }
+
+        return $orderPayment;
+    }
+
+    public function saveOrderPayment(string $orderId, string $returnUrl, int $accepted): OrderPayment
+    {
+        $orderPayment = $this->findByOrderId($orderId);
+        if (!$orderPayment instanceof OrderPayment) {
+            $orderPayment = new OrderPayment();
+        }
+
+        $orderPayment->setOrderId($orderId);
+        $orderPayment->setReturnUrl($returnUrl);
+        $orderPayment->setAccepted($accepted);
+
+        $this->_em->persist($orderPayment);
+        $this->_em->flush();
+
+        return $orderPayment;
+    }
+}
+
+```
+
+At the time we tried this out there was a bug inside the app-bundle: `vendor/shopware/app-bundle/src/ArgumentValueResolver/ContextArgumentResolver.php`
+We fix this with the following lines inside the `resolve` method:
+```php
+public function resolve(Request $request, ArgumentMetadata $argument): iterable
+{
+    if(!$this->supports($request, $argument)) {
+        return;
+    }
+    ...
+}
+```
+The fix will be updated as soon as possible. If it is not present you can add the code yourself.
+
+## Step 11
+Shopware now needs to know if the payment was successful or not. For this the `finalize-url` is called which returns the state:
+```php
+<?php
+
+namespace App\Controller;
+
+class PaymentFinalizeController extends AbstractController
+{
+    public function __construct(private readonly ShopRepositoryInterface $shopRepository, private readonly EntityManagerInterface $entityManager)
+    {
+    }
+
+    #[Route('/payment/finalize', name: 'app_payment_finalize')]
+    public function index(RequestInterface $request): ResponseInterface
+    {
+        $orderId = json_decode($request->getBody()->getContents(), true)['orderTransaction']['orderId'];
+        $request->getBody()->rewind();
+
+        $shopResolver = new ShopResolver($this->shopRepository);
+        $shop = $shopResolver->resolveShop($request);
+
+        $orderPayment = $this->entityManager->getRepository(OrderPayment::class)->findByOrderId($orderId);
+        $signer = new ResponseSigner();
+        if (!$orderPayment instanceof OrderPayment) {
+            return $signer->signResponse(PaymentResponse::failed('Cannot found order'), $shop);
+        }
+
+        if ($orderPayment->getAccepted() === 1) {
+            return $signer->signResponse(PaymentResponse::paid(), $shop);
+        }
+
+        return $signer->signResponse(PaymentResponse::cancelled('User canceled order'), $shop);
+    }
+}
+```
